@@ -1,3 +1,8 @@
 build
+<<<<<<< HEAD
 ./datafiles
 ./test_datafiles
+=======
+datafiles
+test_datafiles
+>>>>>>> a1b544e34c8cbf762497bdcd4d147f633c32d538

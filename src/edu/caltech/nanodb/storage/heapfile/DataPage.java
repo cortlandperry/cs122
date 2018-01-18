@@ -598,6 +598,32 @@ public class DataPage {
         }
 
         // TODO:  Complete this implementation.
-        throw new UnsupportedOperationException("TODO:  Implement!");
+        int tupDataStart = getTupleDataStart(dbPage);
+
+        int offset = getSlotValue(dbPage, slot);
+        int length = getTupleLength(dbPage, slot);
+        deleteTupleDataRange(dbPage, offset, length);
+        setSlotValue(dbPage, slot, EMPTY_SLOT);
+        int counter = 0;
+        boolean empty = true;
+        // numslots - 1 to 0
+
+        for(int i = numSlots - 1; i > 0; i --) {
+            if(getSlotValue(dbPage, i) != EMPTY_SLOT){
+                empty = false;
+                break;
+            }
+            counter = counter + 1;
+        }
+
+        setNumSlots(dbPage, numSlots - counter);
+
+        // TODO: Go Backward to Free all of the slots 
+        //if(getSlotValue(dbPage, slot + 1) == EMPTY_SLOT) {
+         //  deleteTuple(dbPage, slot);
+        //}
+
+        //slot = 0;
+        //throw new UnsupportedOperationException("TODO:  Implement!");
     }
 }
