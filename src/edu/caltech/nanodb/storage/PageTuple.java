@@ -500,7 +500,34 @@ public abstract class PageTuple implements Tuple {
          * properly as well.  (Note that columns whose value is NULL will have
          * the special NULL_OFFSET constant as their offset in the tuple.)
          */
-        throw new UnsupportedOperationException("TODO:  Implement!");
+
+        // If Column is already NULL, we don't need to do anything
+        if(isNullValue(iCol) != true) {
+            // set Null Flag to True
+            setNullFlag(iCol, true);
+            // initial offset of our value
+            int offset = valueOffsets[iCol];
+            int length = 0;
+
+            //get the data type
+            ColumnType colType = schema.getColumnInfo(iCol).getType();
+
+            int storage = 0;
+
+            //find the size of the coloumn data
+            if (colType.hasLength()) {
+                storage = getStorageSize(colType, colType.getLength());
+            }
+            else {
+                 storage = getStorageSize(colType, 1);
+            }
+
+            deleteTupleDataRange(offset, storage);
+            valueOffsets[iCol] = NULL_OFFSET;
+
+        }
+
+        //throw new UnsupportedOperationException("TODO:  Implement!");
     }
 
 
@@ -545,6 +572,24 @@ public abstract class PageTuple implements Tuple {
          * Finally, once you have made space for the new column value, you can
          * write the value itself using the writeNonNullValue() method.
          */
+        ColumnType colType = schema.getColumnInfo(iCol).getType();
+
+        if(isNullValue(iCol) == true){
+            setNullFlag(iCol, false);
+            int oldsize = 1;
+            int newsize = 0;
+            if (colType.hasLength()) {
+                newsize = getStorageSize(value, value.getLength());
+            }
+            else {
+                 newsize = getStorageSize(value, 1);
+            }
+
+        }
+        else {
+
+        }
+
         throw new UnsupportedOperationException("TODO:  Implement!");
     }
 
