@@ -618,12 +618,6 @@ public class DataPage {
 
         setNumSlots(dbPage, numSlots - counter);
 
-        // TODO: Go Backward to Free all of the slots 
-        //if(getSlotValue(dbPage, slot + 1) == EMPTY_SLOT) {
-         //  deleteTuple(dbPage, slot);
-        //}
-
-        //slot = 0;
-        //throw new UnsupportedOperationException("TODO:  Implement!");
+        
     }
 }
