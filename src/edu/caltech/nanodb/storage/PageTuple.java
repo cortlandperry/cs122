@@ -502,7 +502,7 @@ public abstract class PageTuple implements Tuple {
          */
 
         // If Column is already NULL, we don't need to do anything
-        if(isNullValue(iCol) != true) {
+        if(valueOffsets[iCol] != NULL_OFFSET) {
             // set Null Flag to True
             setNullFlag(iCol, true);
             // initial offset of our value
@@ -515,7 +515,7 @@ public abstract class PageTuple implements Tuple {
             int storage = 0;
 
             //find the size of the coloumn data
-            if (colType.hasLength()) {
+            if (colType.getBaseType() == SQLDataType.VARCHAR) {
                 storage = getStorageSize(colType, colType.getLength());
             }
             else {
@@ -524,6 +524,12 @@ public abstract class PageTuple implements Tuple {
 
             deleteTupleDataRange(offset, storage);
             valueOffsets[iCol] = NULL_OFFSET;
+
+            for(int i = 0; i < iCol; i++) {
+                valueOffsets[i] = valueOffsets[i] + storage;
+            }
+
+            pageOffset = pageOffset + storage;  
 
         }
 
@@ -572,25 +578,122 @@ public abstract class PageTuple implements Tuple {
          * Finally, once you have made space for the new column value, you can
          * write the value itself using the writeNonNullValue() method.
          */
-        ColumnType colType = schema.getColumnInfo(iCol).getType();
 
-        if(isNullValue(iCol) == true){
+
+        System.out.println("iCol is" + iCol);
+        ColumnType colType = schema.getColumnInfo(iCol).getType();
+        int oldsize = 0;
+        String stringval = "";
+        int pageStart = getDataStartOffset();
+        int j = 0;
+        int newOffset = 0;
+        int newsize = 0;
+        int prevsize = 0;
+
+        if(valueOffsets[iCol] == NULL_OFFSET){
+
             setNullFlag(iCol, false);
-            int oldsize = 1;
-            int newsize = 0;
-            if (colType.hasLength()) {
-                newsize = getStorageSize(value, value.getLength());
+            
+            //if it is a VARCHAR (has variable length)
+            //oldsize is 0 because the value is null
+
+            if(colType.getBaseType() == SQLDataType.VARCHAR) {
+                //getting the string input value if it is a varchar
+                stringval = TypeConverter.getStringValue(value);
+                newsize = getStorageSize(colType, stringval.length());
             }
             else {
-                 newsize = getStorageSize(value, 1);
+                newsize = getStorageSize(colType, 1);
             }
+            
+            System.out.println("FUCKDONNIE " + j);
+
+            //This will set our new offset
+            while(true) {
+                if(j > iCol){
+                    valueOffsets[iCol] = getDataStartOffset();
+                    break;
+                }
+                else if(valueOffsets[iCol - j] != NULL_OFFSET) {
+                   //find length of this column
+                    ColumnType prevcolType = schema.getColumnInfo(iCol - j).getType();
+                    prevsize = getColumnValueSize(prevcolType, valueOffsets[iCol - j]);
+                    //if it is varchar find its size in slightly different way
+                    
+                    System.out.println("STARCHILDDK : " + prevsize);
+                    System.out.println(valueOffsets[iCol - j]);
+                    //set our new offset by placing it after the last non-null value
+                    valueOffsets[iCol] = valueOffsets[iCol-j] + prevsize;
+                    break;
+                }
+                j = j + 1;
+            }
+
+            
+            System.out.println(valueOffsets[iCol]);
+
+            insertTupleDataRange(valueOffsets[iCol], newsize);
+            valueOffsets[iCol] = valueOffsets[iCol] - newsize;
+            pageOffset = pageOffset - newsize;
+
+            //offset our earlier values backward to account for changed space
+            for(int i = 0; i < iCol; i++) {
+                if(valueOffsets[i] != NULL_OFFSET){
+                    valueOffsets[i] = valueOffsets[i] - (newsize);
+                }
+                
+            }
+
+            writeNonNullValue(dbPage, valueOffsets[iCol], colType, value);
+
 
         }
         else {
+            
+            //find the old column data type and size
+            if (colType.getBaseType() == SQLDataType.VARCHAR) {
+                oldsize = getColumnValueSize(colType, valueOffsets[iCol]);
+                stringval = TypeConverter.getStringValue(value);
+                newsize = getStorageSize(colType, stringval.length());
+
+            }
+            else {
+                oldsize = getStorageSize(colType, 1);
+                newsize = oldsize;
+            }
+
+            //offset our earlier values backward to account for changed space
+            for(int i = 0; i < iCol; i++) {
+                if(valueOffsets[i] != NULL_OFFSET) {
+                    valueOffsets[i] = valueOffsets[i] - (newsize - oldsize);
+                       
+                }
+                    
+            }
+
+            
+            if(newsize >= oldsize) {
+                insertTupleDataRange(valueOffsets[iCol], (newsize - oldsize));
+                
+            }
+            else {
+                //valueOffsets[iCol] = valueOffsets[iCol] - (oldsize - newsize);
+                System.out.println("DKISAWESOME " + (oldsize - newsize));
+                System.out.println("oldsize: " + oldsize);
+                System.out.println("newsize: " + newsize);
+                System.out.println("ValueOffsets" + valueOffsets[iCol]);
+                System.out.println("EndofPage" + getEndOffset());
+                deleteTupleDataRange(valueOffsets[iCol], (oldsize - newsize));
+
+            }
+
+            valueOffsets[iCol] = valueOffsets[iCol] - (newsize - oldsize);
+            pageOffset = pageOffset - (newsize - oldsize);
+            writeNonNullValue(dbPage, valueOffsets[iCol], colType, value);
 
         }
-
-        throw new UnsupportedOperationException("TODO:  Implement!");
+        //*/
+        //throw new UnsupportedOperationException("TODO:  Implement!");
     }
 
 
